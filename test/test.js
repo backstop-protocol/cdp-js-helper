@@ -233,6 +233,12 @@ contract('B Interface', function (accounts) {
   it('calcNewBorrowLimitAndLiquidationPrice', async function () {
     const user = accounts[2]
 
+    let userInfo = await B.getUserInfo(web3,user)
+
+    const [maxDebt0,newLiqPrice0] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1"),web3.utils.toWei("1"),web3)
+    assert.equal(maxDebt0.toString(10),"0")
+    assert.equal(newLiqPrice0.toString(10),"0")
+
     const depositVal = web3.utils.toWei("2") // 2 ETH
     const txObject = B.firstDeposit(web3,user)
     //console.log({txObject})
@@ -241,7 +247,7 @@ contract('B Interface', function (accounts) {
     await txObject.send({gas:gasConsumption,value:depositVal,from:user})
     await mineBlock()
 
-    let userInfo = await B.getUserInfo(web3,user)
+    userInfo = await B.getUserInfo(web3,user)
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
@@ -259,22 +265,22 @@ contract('B Interface', function (accounts) {
     userInfo = await B.getUserInfo(web3,user)
 
     const [maxDebt,newLiqPrice] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("0"),web3)
-    assert.equal(web3.utils.fromWei(newLiqPrice),(150 * 1.5/2).toString())
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice),(150 * 1.5/2).toString()))
 
     const [maxDebt2,newLiqPrice2] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("4"),web3.utils.toWei("0"),web3)
     assert(closeEnough(web3.utils.fromWei(newLiqPrice2),(150 * 1.5/6).toString()))
 
     const [maxDebt3,newLiqPrice3] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-1"),web3.utils.toWei("0"),web3)
-    assert.equal(web3.utils.fromWei(newLiqPrice3),(150 * 1.5).toString())
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice3),(150 * 1.5).toString()))
 
     const [maxDebt4,newLiqPrice4] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("150"),web3)
-    assert.equal(web3.utils.fromWei(newLiqPrice4),(300 * 1.5/2).toString())
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice4),(300 * 1.5/2).toString()))
 
     const [maxDebt5,newLiqPrice5] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("-50"),web3)
-    assert.equal(web3.utils.fromWei(newLiqPrice5),(100 * 1.5/2).toString())
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice5),(100 * 1.5/2).toString()))
 
     const [maxDebt6,newLiqPrice6] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1.5"),web3.utils.toWei("-50"),web3)
-    assert.equal(web3.utils.fromWei(newLiqPrice6),(100 * 1.5/3.5).toString())
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice6),(100 * 1.5/3.5).toString()))
 
     userInfo.miscInfo.spotPrice = web3.utils.toWei("100.5")
     userInfo.bCdpInfo.maxDaiDebt = web3.utils.toWei("134")
@@ -299,6 +305,10 @@ contract('B Interface', function (accounts) {
     let userInfo = await B.getUserInfo(web3,user)
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
+
+    const [succ91,msg91] = B.verifyBorrowInput(userInfo, web3.utils.toWei("50"),web3)
+    assert(! succ91, "verifyBorrowInput should fail")
+    assert.equal(msg91,"A Vault requires a minimum of 100 Dai to be generated")
 
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
@@ -377,8 +387,67 @@ contract('B Interface', function (accounts) {
     assert(! succ14, "verifyRepayInput should failed")
     assert.equal(msg14,"Amount exceeds dai debt")
 
-    const [succ15,msg15] = B.verifyRepayInput(userInfo,web3.utils.toWei("100.0031"),web3)
+    userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("200")
+    userInfo.userWalletInfo.daiBalance = web3.utils.toWei("200")
+    const [succ141,msg141] = B.verifyRepayInput(userInfo,web3.utils.toWei("100"),web3)
+    assert(! succ141, "verifyRepayInput should failed")
+    assert.equal(msg141,"You can repay all your outstanding debt or a maximum of 50 Dai")
+
+
+    const [succ15,msg15] = B.verifyRepayInput(userInfo,web3.utils.toWei("40.0031"),web3)
     assert(succ15, "verifyRepayInput should pass")
+
+    // leave under 1 dai - should pass
+    const [succ16,msg16] = B.verifyRepayInput(userInfo,web3.utils.toWei("149.0031"),web3)
+    assert(succ16, "verifyRepayInput should pass", msg16)
+  })
+
+  it('repayAllDai', async function () {
+    const user = accounts[4]
+
+    const depositVal = web3.utils.toWei("2") // 2 ETH
+    const txObject = B.firstDeposit(web3,user)
+    //console.log({txObject})
+    let gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
+    console.log({gasConsumption})
+    await txObject.send({gas:gasConsumption,value:depositVal,from:user})
+    await mineBlock()
+
+    let userInfo = await B.getUserInfo(web3,user)
+    const cdp = userInfo.bCdpInfo.cdp
+    console.log({cdp})
+
+    const withdrawalVal = web3.utils.toWei("150")
+    const txObject2 = B.generateDai(web3,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
+    const gasConsumption2 = increaseABit(await txObject2.estimateGas({from:user}))
+    console.log({gasConsumption2})
+    await txObject2.send({gas:gasConsumption2,from:user})
+    await mineBlock()
+
+
+    console.log("query user info again")
+    userInfo = await B.getUserInfo(web3,user)
+    assert.equal(userInfo.bCdpInfo.daiDebt.toString(10),web3.utils.toWei("150").toString(10),"user debt should be 150")
+
+    // first unlock dai
+    console.log("proxy",userInfo.proxyInfo.userProxy)
+    const txObject3 = B.unlockDai(web3,userInfo.proxyInfo.userProxy)
+    gasConsumption = increaseABit(await txObject3.estimateGas({value:0,from:user}))
+    await txObject3.send({gas:gasConsumption,value:0,from:user})
+    await mineBlock()
+
+    const txObject4 = B.repayAllDai(web3,userInfo.proxyInfo.userProxy,cdp)
+    //console.log({txObject})
+    gasConsumption = increaseABit(await txObject4.estimateGas({value:0,from:user}))
+    console.log({gasConsumption})
+    await txObject4.send({gas:gasConsumption,value:0,from:user})
+    await mineBlock()
+
+    const userInfoAfterAll = await B.getUserInfo(web3,user)
+    //console.log({userInfoAfter})
+    assert(userInfoAfterAll.bCdpInfo.hasCdp,"user is expected to have a cdp")
+    //assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("4").toString(10),"user eth balance is expected to be 2")
+    assert.equal(userInfoAfterAll.bCdpInfo.daiDebt.toString(10),web3.utils.toWei("0").toString(10),"user debt should be 0 after repayAll")
   })
 })
 

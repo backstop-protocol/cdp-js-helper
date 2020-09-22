@@ -108,6 +108,18 @@ module.exports.repayDai = function(web3, userProxy, cdp, wad) {
   return proxyContract.methods['execute(address,bytes)'](actionProxyAddress,data)
 }
 
+module.exports.repayAllDai = function(web3, userProxy, cdp) {
+  const actionProxyContract = new web3.eth.Contract(actionProxyAbi,actionProxyAddress)
+
+  const data = actionProxyContract.methods.safeWipeAll(BCDP_MANGER,
+                                                       MCD_JOIN_DAI,
+                                                       cdp,
+                                                       userProxy).encodeABI()
+
+  const proxyContract = new web3.eth.Contract(proxyAbi,userProxy)
+  return proxyContract.methods['execute(address,bytes)'](actionProxyAddress,data)
+}
+
 module.exports.migrateFresh = function(web3, userProxy, makerDaoCdp) {
   const actionProxyContract = new web3.eth.Contract(actionProxyAbi,actionProxyAddress)
 
@@ -165,6 +177,8 @@ module.exports.calcNewBorrowLimitAndLiquidationPrice = function(userInfo,
   const maxDaiDebt = toNumber(userInfo.bCdpInfo.maxDaiDebt,web3)
   const spotPrice = toNumber(userInfo.miscInfo.spotPrice,web3)
 
+  if(ethDeposit == 0) return [web3.utils.toWei("0"), web3.utils.toWei("0")]
+
   const newMaxDaiDebt = maxDaiDebt * (ethDeposit + dEth) / ethDeposit
   const liqRatio = ethDeposit * spotPrice / maxDaiDebt
   // (total dai debt) * liqRatio = (total eth deposit) * liquidationPrice
@@ -210,7 +224,12 @@ module.exports.verifyBorrowInput = function(userInfo,
                                             web3) {
   dDai = toNumber(dDai,web3)
   if(dDai <= 0) return [false, "Borrow amount must be positive"]
-  if((toNumber(userInfo.bCdpInfo.daiDebt,web3) + dDai) > toNumber(userInfo.bCdpInfo.maxDaiDebt,web3)) return [false,"Amount exceeds allowed borrowed"]
+
+  const newDebt = toNumber(userInfo.bCdpInfo.daiDebt,web3) + dDai
+  const dust = toNumber(userInfo.miscInfo.dustInWei,web3)
+
+  if(newDebt > toNumber(userInfo.bCdpInfo.maxDaiDebt,web3)) return [false,"Amount exceeds allowed borrowed"]
+  if(newDebt < dust) return [false,"A Vault requires a minimum of " + dust.toString() + " Dai to be generated"]
 
   return [true,""]
 }
@@ -225,6 +244,12 @@ module.exports.verifyRepayInput = function(userInfo,
   if(dDai > toNumber(userInfo.userWalletInfo.daiBalance,web3)) return [false,"Amount exceeds dai balance"]
   if(dDai > toNumber(userInfo.bCdpInfo.daiDebt,web3)) return [false,"Amount exceeds dai debt"]
   if(dDai > toNumber(userInfo.userWalletInfo.daiAllowance,web3)) return [false,"Must unlock DAI"]
+
+  const newDebt = toNumber(userInfo.bCdpInfo.daiDebt,web3) - dDai
+  const dust = toNumber(userInfo.miscInfo.dustInWei, web3)
+  const maxRepay = toNumber(userInfo.bCdpInfo.daiDebt,web3) - dust
+
+  if(dust >= newDebt && newDebt > 1) return [false,"You can repay all your outstanding debt or a maximum of " + maxRepay.toString() + " Dai"]
 
   return [true,""]
 }
