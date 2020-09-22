@@ -165,10 +165,10 @@ function toNumber(bignum,web3) {
   return Number(web3.utils.fromWei(bignum))
 }
 
-module.exports.calcNewBorrowLimitAndLiquidationPrice = function(userInfo,
-                                                                dEth,
-                                                                dDai,
-                                                                web3) {
+function calcNewBorrowAndLPrice(userInfo,
+                                dEth,
+                                dDai,
+                                web3) {
   dEth = toNumber(dEth,web3)
   dDai = toNumber(dDai,web3)
   const ethDeposit = toNumber(userInfo.bCdpInfo.ethDeposit,web3)
@@ -186,6 +186,8 @@ module.exports.calcNewBorrowLimitAndLiquidationPrice = function(userInfo,
 
   return [web3.utils.toWei(newMaxDaiDebt.toString()), web3.utils.toWei(newLiquidationPrice.toString())]
 }
+
+module.exports.calcNewBorrowLimitAndLiquidationPrice = calcNewBorrowAndLPrice
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -211,7 +213,7 @@ module.exports.verifyWithdrawInput = function(userInfo,
   if(dEth <= 0) return [false, "Withdraw amount must be positive"]
   if(dEth > toNumber(userInfo.bCdpInfo.ethDeposit,web3)) return [false, "Amount exceeds CDP deposit"]
 
-  const [maxDebt,newPrice] = module.exports.calcNewBorrowLimitAndLiquidationPrice(userInfo,dEthMinus.toString(10),"0",web3)
+  const [maxDebt,newPrice] = calcNewBorrowAndLPrice(userInfo,dEthMinus.toString(10),"0",web3)
   if(toNumber(maxDebt,web3) < toNumber(userInfo.bCdpInfo.daiDebt,web3)) return [false,"Amount exceeds allowed withdrawal"]
 
   return [true,""]
