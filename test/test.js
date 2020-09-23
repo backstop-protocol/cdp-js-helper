@@ -289,6 +289,10 @@ contract('B Interface', function (accounts) {
     assert.equal(web3.utils.fromWei(maxDebt7),(3*100.5 / 1.5).toString())
     const [maxDebt8,newLiqPrice8] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-1"),web3.utils.toWei("-1"),web3)
     assert.equal(web3.utils.fromWei(maxDebt8),(1*100.5 / 1.5).toString())
+
+    const [maxDebt9,newLiqPrice9] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-2"),web3.utils.toWei("0"),web3)
+    assert.equal(web3.utils.fromWei(maxDebt9),(0).toString())
+    assert.equal(web3.utils.fromWei(newLiqPrice9),(0).toString())
   })
 
   it('input verification', async function () {
@@ -393,12 +397,27 @@ contract('B Interface', function (accounts) {
     assert(! succ141, "verifyRepayInput should failed")
     assert.equal(msg141,"You can repay all your outstanding debt or a maximum of 50 Dai")
 
+    userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("200")
+    userInfo.userWalletInfo.daiBalance = web3.utils.toWei("149.99999")
+    const [succ142,msg142] = B.verifyRepayInput(userInfo,web3.utils.toWei("149.5"),web3)
+    assert(! succ142, "verifyRepayInput should failed")
+    assert.equal(msg142,"Dai balance is not enough to repay your entire debt")
+
+    userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("149.99999")
+    userInfo.userWalletInfo.daiBalance = web3.utils.toWei("200")
+    const [succ143,msg143] = B.verifyRepayInput(userInfo,web3.utils.toWei("149.8"),web3)
+    assert(! succ143, "verifyRepayInput should failed")
+    assert.equal(msg143,"Dai allowance is not enough to repay your entire debt")
+
 
     const [succ15,msg15] = B.verifyRepayInput(userInfo,web3.utils.toWei("40.0031"),web3)
     assert(succ15, "verifyRepayInput should pass")
 
     // leave under 1 dai - should pass
+    userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("150.99999")
+    userInfo.userWalletInfo.daiBalance = web3.utils.toWei("200")
     const [succ16,msg16] = B.verifyRepayInput(userInfo,web3.utils.toWei("149.0031"),web3)
+
     assert(succ16, "verifyRepayInput should pass", msg16)
   })
 
