@@ -2,9 +2,12 @@
 // const Web3 = require('web3');
 // const web3 = new Web3(new Web3.providers.HttpProvider('http://localhost:8545'));
 const B = require('../bInterface.js')
+let networkId
 
 contract('B Interface', function (accounts) {
   beforeEach('initing', async () => {
+    networkId = await web3.eth.net.getId()
+    console.log({networkId})
   })
   afterEach(async () => {
   })
@@ -12,12 +15,12 @@ contract('B Interface', function (accounts) {
   it('first deposit', async function () {
     const user = accounts[0]
     console.log("query user info")
-    const userInfo = await B.getUserInfo(web3,user)
+    const userInfo = await B.getUserInfo(web3,networkId,user)
     assert(! userInfo.bCdpInfo.hasCdp, "user is not expected to have a cdp")
     assert(! userInfo.proxyInfo.hasProxy, "user is not expected to have a proxy")
 
     const depositVal = web3.utils.toWei("2") // 2 ETH
-    const txObject = B.firstDeposit(web3,user)
+    const txObject = B.firstDeposit(web3,networkId,user)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
     console.log({gasConsumption})
@@ -26,7 +29,7 @@ contract('B Interface', function (accounts) {
     // .on('confirmation', function(confirmationNumber, receipt)
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     //console.log({userInfoAfter})
     assert(userInfoAfter.bCdpInfo.hasCdp,"user is expected to have a cdp")
@@ -39,13 +42,13 @@ contract('B Interface', function (accounts) {
     const user = accounts[0]
 
     console.log("query user info")
-    const userInfo = await B.getUserInfo(web3,user)
+    const userInfo = await B.getUserInfo(web3,networkId,user)
     const cdp = userInfo.bCdpInfo.cdp
     //console.log({cdp})
 
     const depositVal = web3.utils.toWei("5") // 5 ETH
     console.log("proxy",userInfo.proxyInfo.userProxy)
-    const txObject = B.depositETH(web3,userInfo.proxyInfo.userProxy,cdp)
+    const txObject = B.depositETH(web3,networkId,userInfo.proxyInfo.userProxy,cdp)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
     console.log({gasConsumption})
@@ -54,7 +57,7 @@ contract('B Interface', function (accounts) {
     // .on('confirmation', function(confirmationNumber, receipt)
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     assert(userInfoAfter.bCdpInfo.hasCdp,"user is expected to have a cdp")
     assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("7").toString(10),"user eth balance is expected to be 2")
@@ -66,14 +69,14 @@ contract('B Interface', function (accounts) {
     const user = accounts[0]
 
     console.log("query user info")
-    const userInfo = await B.getUserInfo(web3,user)
+    const userInfo = await B.getUserInfo(web3,networkId,user)
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
     const withrawVal = web3.utils.toWei("3") // 3 ETH
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
-    const txObject = B.withdrawETH(web3,userInfo.proxyInfo.userProxy,cdp,withrawVal)
+    const txObject = B.withdrawETH(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withrawVal)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:0,from:user}))
     console.log({gasConsumption})
@@ -82,7 +85,7 @@ contract('B Interface', function (accounts) {
     // .on('confirmation', function(confirmationNumber, receipt)
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     assert(userInfoAfter.bCdpInfo.hasCdp,"user is expected to have a cdp")
     assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("4").toString(10),"user eth balance is expected to be 2")
@@ -94,7 +97,7 @@ contract('B Interface', function (accounts) {
     const user = accounts[0]
 
     console.log("query user info")
-    const userInfo = await B.getUserInfo(web3,user)
+    const userInfo = await B.getUserInfo(web3,networkId,user)
     //console.log(userInfo);
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
@@ -102,7 +105,7 @@ contract('B Interface', function (accounts) {
     const withrawVal = web3.utils.toWei("300") // 300 dai
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
-    const txObject = B.generateDai(web3,userInfo.proxyInfo.userProxy,cdp,withrawVal)
+    const txObject = B.generateDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withrawVal)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:0,from:user}))
     console.log({gasConsumption})
@@ -111,7 +114,7 @@ contract('B Interface', function (accounts) {
     // .on('confirmation', function(confirmationNumber, receipt)
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     assert(userInfoAfter.bCdpInfo.hasCdp,"user is expected to have a cdp")
     //assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("4").toString(10),"user eth balance is expected to be 2")
@@ -123,20 +126,20 @@ contract('B Interface', function (accounts) {
     const user = accounts[0]
 
     console.log("query user info")
-    const userInfo = await B.getUserInfo(web3,user)
+    const userInfo = await B.getUserInfo(web3,networkId,user)
     //console.log(userInfo);
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
     // first unlock dai
     console.log("proxy",userInfo.proxyInfo.userProxy)
-    const txObject1 = B.unlockDai(web3,userInfo.proxyInfo.userProxy)
+    const txObject1 = B.unlockDai(web3,networkId,userInfo.proxyInfo.userProxy)
     let gasConsumption = increaseABit(await txObject1.estimateGas({value:0,from:user}))
     await txObject1.send({gas:gasConsumption,value:0,from:user})
     await mineBlock()
 
     const withrawVal = web3.utils.toWei("50") // 300 dai
-    const txObject2 = B.repayDai(web3,userInfo.proxyInfo.userProxy,cdp,withrawVal)
+    const txObject2 = B.repayDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withrawVal)
     //console.log({txObject})
     gasConsumption = increaseABit(await txObject2.estimateGas({value:0,from:user}))
     console.log({gasConsumption})
@@ -145,7 +148,7 @@ contract('B Interface', function (accounts) {
     // .on('confirmation', function(confirmationNumber, receipt)
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     assert(userInfoAfter.bCdpInfo.hasCdp,"user is expected to have a cdp")
     //assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("4").toString(10),"user eth balance is expected to be 2")
@@ -156,7 +159,7 @@ contract('B Interface', function (accounts) {
     await txObject2.send({gas:gasConsumption,value:0,from:user})
     await mineBlock()
 
-    const userInfoAfterAfter = await B.getUserInfo(web3,user)
+    const userInfoAfterAfter = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     assert(userInfoAfterAfter.bCdpInfo.hasCdp,"user is expected to have a cdp")
     //assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("4").toString(10),"user eth balance is expected to be 2")
@@ -165,7 +168,7 @@ contract('B Interface', function (accounts) {
 
   it('migrate fresh', async function () {
     const user = accounts[1] // new user
-    const txMakerDao = B.openMakerDaoCdp(web3,user)
+    const txMakerDao = B.openMakerDaoCdp(web3,networkId,user)
     const cdpVal = web3.utils.toWei("10")
     const makerDaoGasConsmption = increaseABit(await txMakerDao.estimateGas({value:cdpVal, from:user}))
     await txMakerDao.send({gas:makerDaoGasConsmption,value:cdpVal,from:user})
@@ -173,7 +176,7 @@ contract('B Interface', function (accounts) {
     await mineBlock()
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
 
     assert(! userInfoAfter.bCdpInfo.hasCdp, "not expected to have B cdp")
     assert(userInfoAfter.makerdaoCdpInfo.hasCdp, "expected to have a maker cdp")
@@ -184,13 +187,13 @@ contract('B Interface', function (accounts) {
 
     console.log({makerDaoCdp},{proxy})
     // do the migration
-    const txMigrateFresh = B.migrateFresh(web3,proxy,makerDaoCdp)
+    const txMigrateFresh = B.migrateFresh(web3,networkId,proxy,makerDaoCdp)
     const migrateFreshGasConsmption = increaseABit(await txMigrateFresh.estimateGas({value:0,from:user}))
     await txMigrateFresh.send({gas:migrateFreshGasConsmption,value:0,from:user})
 
     await mineBlock()
 
-    const userInfoAfterAfter = await B.getUserInfo(web3,user)
+    const userInfoAfterAfter = await B.getUserInfo(web3,networkId,user)
 
     assert.equal(userInfoAfterAfter.makerdaoCdpInfo.ethDeposit.toString(10),web3.utils.toWei("0").toString(10),"user deposit is not as expected")
     assert.equal(userInfoAfterAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("10").toString(10),"user deposit is not as expected")
@@ -198,7 +201,7 @@ contract('B Interface', function (accounts) {
 
   it('migrate existing', async function () {
     const user = accounts[0] // new user
-    const txMakerDao = B.openMakerDaoCdp(web3,user)
+    const txMakerDao = B.openMakerDaoCdp(web3,networkId,user)
     const cdpVal = web3.utils.toWei("10")
     const makerDaoGasConsmption = increaseABit(await txMakerDao.estimateGas({value:cdpVal, from:user}))
     await txMakerDao.send({gas:makerDaoGasConsmption,value:cdpVal,from:user})
@@ -206,7 +209,7 @@ contract('B Interface', function (accounts) {
     await mineBlock()
 
     console.log("query user info again")
-    const userInfoAfter = await B.getUserInfo(web3,user)
+    const userInfoAfter = await B.getUserInfo(web3,networkId,user)
 
     assert(userInfoAfter.bCdpInfo.hasCdp, "not expected to have B cdp")
     assert(userInfoAfter.makerdaoCdpInfo.hasCdp, "expected to have a maker cdp")
@@ -218,13 +221,13 @@ contract('B Interface', function (accounts) {
 
     console.log({makerDaoCdp},{proxy})
     // do the migration
-    const txMigrateFresh = B.migrateToExisting(web3,proxy,makerDaoCdp,userInfoAfter.bCdpInfo.cdp)
+    const txMigrateFresh = B.migrateToExisting(web3,networkId,proxy,makerDaoCdp,userInfoAfter.bCdpInfo.cdp)
     const migrateFreshGasConsmption = increaseABit(await txMigrateFresh.estimateGas({value:0,from:user}))
     await txMigrateFresh.send({gas:migrateFreshGasConsmption,value:0,from:user})
 
     await mineBlock()
 
-    const userInfoAfterAfter = await B.getUserInfo(web3,user)
+    const userInfoAfterAfter = await B.getUserInfo(web3,networkId,user)
 
     assert.equal(userInfoAfterAfter.makerdaoCdpInfo.ethDeposit.toString(10),web3.utils.toWei("0").toString(10),"user deposit is not as expected")
     assert.equal(userInfoAfterAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("14").toString(10),"user deposit is not as expected")
@@ -233,28 +236,28 @@ contract('B Interface', function (accounts) {
   it('calcNewBorrowLimitAndLiquidationPrice', async function () {
     const user = accounts[2]
 
-    let userInfo = await B.getUserInfo(web3,user)
+    let userInfo = await B.getUserInfo(web3,networkId,user)
 
     const [maxDebt0,newLiqPrice0] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1"),web3.utils.toWei("1"),web3)
     assert.equal(maxDebt0.toString(10),"0")
     assert.equal(newLiqPrice0.toString(10),"0")
 
     const depositVal = web3.utils.toWei("2") // 2 ETH
-    const txObject = B.firstDeposit(web3,user)
+    const txObject = B.firstDeposit(web3,networkId,user)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
     console.log({gasConsumption})
     await txObject.send({gas:gasConsumption,value:depositVal,from:user})
     await mineBlock()
 
-    userInfo = await B.getUserInfo(web3,user)
+    userInfo = await B.getUserInfo(web3,networkId,user)
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
     const withdrawalVal = web3.utils.toWei("150")
-    const txObject2 = B.generateDai(web3,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
+    const txObject2 = B.generateDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
     const gasConsumption2 = increaseABit(await txObject2.estimateGas({from:user}))
     console.log({gasConsumption2})
     await txObject2.send({gas:gasConsumption2,from:user})
@@ -262,7 +265,7 @@ contract('B Interface', function (accounts) {
 
 
     console.log("query user info again")
-    userInfo = await B.getUserInfo(web3,user)
+    userInfo = await B.getUserInfo(web3,networkId,user)
 
     const [maxDebt,newLiqPrice] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("0"),web3)
     assert(closeEnough(web3.utils.fromWei(newLiqPrice),(150 * 1.5/2).toString()))
@@ -299,14 +302,14 @@ contract('B Interface', function (accounts) {
     const user = accounts[3]
 
     const depositVal = web3.utils.toWei("2") // 2 ETH
-    const txObject = B.firstDeposit(web3,user)
+    const txObject = B.firstDeposit(web3,networkId,user)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
     console.log({gasConsumption})
     await txObject.send({gas:gasConsumption,value:depositVal,from:user})
     await mineBlock()
 
-    let userInfo = await B.getUserInfo(web3,user)
+    let userInfo = await B.getUserInfo(web3,networkId,user)
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
@@ -317,7 +320,7 @@ contract('B Interface', function (accounts) {
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
     const withdrawalVal = web3.utils.toWei("150")
-    const txObject2 = B.generateDai(web3,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
+    const txObject2 = B.generateDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
     const gasConsumption2 = increaseABit(await txObject2.estimateGas({from:user}))
     console.log({gasConsumption2})
     await txObject2.send({gas:gasConsumption2,from:user})
@@ -325,7 +328,7 @@ contract('B Interface', function (accounts) {
 
 
     console.log("query user info again")
-    userInfo = await B.getUserInfo(web3,user)
+    userInfo = await B.getUserInfo(web3,networkId,user)
 
     // verify deposit
     const [succ1,msg1] = B.verifyDepositInput(userInfo, web3.utils.toWei("-1"),web3)
@@ -425,19 +428,19 @@ contract('B Interface', function (accounts) {
     const user = accounts[4]
 
     const depositVal = web3.utils.toWei("2") // 2 ETH
-    const txObject = B.firstDeposit(web3,user)
+    const txObject = B.firstDeposit(web3,networkId,user)
     //console.log({txObject})
     let gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
     console.log({gasConsumption})
     await txObject.send({gas:gasConsumption,value:depositVal,from:user})
     await mineBlock()
 
-    let userInfo = await B.getUserInfo(web3,user)
+    let userInfo = await B.getUserInfo(web3,networkId,user)
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
     const withdrawalVal = web3.utils.toWei("150")
-    const txObject2 = B.generateDai(web3,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
+    const txObject2 = B.generateDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withdrawalVal)
     const gasConsumption2 = increaseABit(await txObject2.estimateGas({from:user}))
     console.log({gasConsumption2})
     await txObject2.send({gas:gasConsumption2,from:user})
@@ -445,24 +448,24 @@ contract('B Interface', function (accounts) {
 
 
     console.log("query user info again")
-    userInfo = await B.getUserInfo(web3,user)
+    userInfo = await B.getUserInfo(web3,networkId,user)
     assert.equal(userInfo.bCdpInfo.daiDebt.toString(10),web3.utils.toWei("150").toString(10),"user debt should be 150")
 
     // first unlock dai
     console.log("proxy",userInfo.proxyInfo.userProxy)
-    const txObject3 = B.unlockDai(web3,userInfo.proxyInfo.userProxy)
+    const txObject3 = B.unlockDai(web3,networkId,userInfo.proxyInfo.userProxy)
     gasConsumption = increaseABit(await txObject3.estimateGas({value:0,from:user}))
     await txObject3.send({gas:gasConsumption,value:0,from:user})
     await mineBlock()
 
-    const txObject4 = B.repayAllDai(web3,userInfo.proxyInfo.userProxy,cdp)
+    const txObject4 = B.repayAllDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp)
     //console.log({txObject})
     gasConsumption = increaseABit(await txObject4.estimateGas({value:0,from:user}))
     console.log({gasConsumption})
     await txObject4.send({gas:gasConsumption,value:0,from:user})
     await mineBlock()
 
-    const userInfoAfterAll = await B.getUserInfo(web3,user)
+    const userInfoAfterAll = await B.getUserInfo(web3,networkId,user)
     //console.log({userInfoAfter})
     assert(userInfoAfterAll.bCdpInfo.hasCdp,"user is expected to have a cdp")
     //assert.equal(userInfoAfter.bCdpInfo.ethDeposit.toString(10),web3.utils.toWei("4").toString(10),"user eth balance is expected to be 2")
