@@ -238,9 +238,14 @@ contract('B Interface', function (accounts) {
 
     let userInfo = await B.getUserInfo(web3,networkId,user)
 
-    const [maxDebt0,newLiqPrice0] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1"),web3.utils.toWei("1"),web3)
+    const [maxDebt0,newLiqPrice0] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("1"),web3)
     assert.equal(maxDebt0.toString(10),"0")
     assert.equal(newLiqPrice0.toString(10),"0")
+
+    userInfo.miscInfo.spotPrice = web3.utils.toWei("100")
+    const [maxDebt10,newLiqPrice10] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1.5"),web3.utils.toWei("1"),web3)
+    assert.equal(maxDebt10.toString(10),web3.utils.toWei((150/1.5).toString(10)).toString(10))
+    assert.equal(newLiqPrice10.toString(10),"0")
 
     const depositVal = web3.utils.toWei("2") // 2 ETH
     const txObject = B.firstDeposit(web3,networkId,user)
