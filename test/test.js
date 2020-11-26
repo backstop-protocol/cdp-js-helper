@@ -247,7 +247,7 @@ contract('B Interface', function (accounts) {
     assert.equal(maxDebt10.toString(10),web3.utils.toWei((150/1.5).toString(10)).toString(10))
     assert.equal(newLiqPrice10.toString(10),"0")
 
-    const depositVal = web3.utils.toWei("2") // 2 ETH
+    const depositVal = web3.utils.toWei("5") // 5 ETH
     const txObject = B.firstDeposit(web3,networkId,user)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
@@ -273,32 +273,33 @@ contract('B Interface', function (accounts) {
     userInfo = await B.getUserInfo(web3,networkId,user)
 
     const [maxDebt,newLiqPrice] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("0"),web3)
-    assert(closeEnough(web3.utils.fromWei(newLiqPrice),(550 * 1.5/2).toString()))
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice),(550 * 1.5/5).toString()))
 
     const [maxDebt2,newLiqPrice2] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("4"),web3.utils.toWei("0"),web3)
-    assert(closeEnough(web3.utils.fromWei(newLiqPrice2),(550 * 1.5/6).toString()))
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice2),(550 * 1.5/9).toString()))
 
     const [maxDebt3,newLiqPrice3] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-1"),web3.utils.toWei("0"),web3)
-    assert(closeEnough(web3.utils.fromWei(newLiqPrice3),(550 * 1.5).toString()))
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice3),(550 * 1.5/4).toString()))
 
     const [maxDebt4,newLiqPrice4] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("150"),web3)
-    assert(closeEnough(web3.utils.fromWei(newLiqPrice4),(700 * 1.5/2).toString()))
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice4),(700 * 1.5/5).toString()))
 
     const [maxDebt5,newLiqPrice5] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("0"),web3.utils.toWei("-50"),web3)
-    assert(closeEnough(web3.utils.fromWei(newLiqPrice5),(500 * 1.5/2).toString()))
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice5),(500 * 1.5/5).toString()))
 
     const [maxDebt6,newLiqPrice6] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1.5"),web3.utils.toWei("-50"),web3)
-    assert(closeEnough(web3.utils.fromWei(newLiqPrice6),(500 * 1.5/3.5).toString()))
+    assert(closeEnough(web3.utils.fromWei(newLiqPrice6),(500 * 1.5/6.5).toString()))
 
     userInfo.miscInfo.spotPrice = web3.utils.toWei("100.5")
-    userInfo.bCdpInfo.maxDaiDebt = web3.utils.toWei("134")
+    userInfo.bCdpInfo.maxDaiDebt = web3.utils.toWei("335")
 
     const [maxDebt7,newLiqPrice7] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("1"),web3.utils.toWei("-1"),web3)
-    assert.equal(web3.utils.fromWei(maxDebt7),(3*100.5 / 1.5).toString())
-    const [maxDebt8,newLiqPrice8] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-1"),web3.utils.toWei("-1"),web3)
-    assert.equal(web3.utils.fromWei(maxDebt8),(1*100.5 / 1.5).toString())
 
-    const [maxDebt9,newLiqPrice9] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-2"),web3.utils.toWei("0"),web3)
+    assert.equal(web3.utils.fromWei(maxDebt7),(6*335 / 5).toString())
+    const [maxDebt8,newLiqPrice8] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-1"),web3.utils.toWei("-1"),web3)
+    assert.equal(web3.utils.fromWei(maxDebt8),(4*335 / 5).toString())
+
+    const [maxDebt9,newLiqPrice9] = B.calcNewBorrowLimitAndLiquidationPrice(userInfo,web3.utils.toWei("-5"),web3.utils.toWei("0"),web3)
     assert.equal(web3.utils.fromWei(maxDebt9),(0).toString())
     assert.equal(web3.utils.fromWei(newLiqPrice9),(0).toString())
   })
@@ -306,7 +307,7 @@ contract('B Interface', function (accounts) {
   it('input verification', async function () {
     const user = accounts[3]
 
-    const depositVal = web3.utils.toWei("2") // 2 ETH
+    const depositVal = web3.utils.toWei("5") // 5 ETH
     const txObject = B.firstDeposit(web3,networkId,user)
     //console.log({txObject})
     const gasConsumption = increaseABit(await txObject.estimateGas({value:depositVal,from:user}))
@@ -320,7 +321,8 @@ contract('B Interface', function (accounts) {
 
     const [succ91,msg91] = B.verifyBorrowInput(userInfo, web3.utils.toWei("50"),web3)
     assert(! succ91, "verifyBorrowInput should fail")
-    assert.equal(msg91,"A Vault requires a minimum of 500 Dai to be generated")
+    const dust = networkId === 42 ? "100" : "500"
+    assert.equal(msg91,"A Vault requires a minimum of " + dust.toString() + " Dai to be generated")
 
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
@@ -355,11 +357,11 @@ contract('B Interface', function (accounts) {
     assert(! succ4, "verifyWithdrawInput should failed")
     assert.equal(msg4,"Withdraw amount must be positive")
 
-    const [succ5,msg5] = B.verifyWithdrawInput(userInfo,web3.utils.toWei("2.001"),web3)
+    const [succ5,msg5] = B.verifyWithdrawInput(userInfo,web3.utils.toWei("5.001"),web3)
     assert(! succ5, "verifyWithdrawInput should failed")
     assert.equal(msg5,"Amount exceeds CDP deposit")
 
-    const [succ6,msg6] = B.verifyWithdrawInput(userInfo,web3.utils.toWei("1.9"),web3)
+    const [succ6,msg6] = B.verifyWithdrawInput(userInfo,web3.utils.toWei("4.9"),web3)
     assert(! succ6, "verifyWithdrawInput should failed")
     assert.equal(msg6,"Amount exceeds allowed withdrawal")
 
@@ -371,7 +373,7 @@ contract('B Interface', function (accounts) {
     assert(! succ8, "verifyBorrowInput should fail")
     assert.equal(msg8,"Borrow amount must be positive")
 
-    const [succ9,msg9] = B.verifyBorrowInput(userInfo, web3.utils.toWei("1000"),web3)
+    const [succ9,msg9] = B.verifyBorrowInput(userInfo, web3.utils.toWei("5000"),web3)
     assert(! succ9, "verifyBorrowInput should fail")
     assert.equal(msg9,"Amount exceeds allowed borrowed")
 
@@ -401,11 +403,12 @@ contract('B Interface', function (accounts) {
     assert(! succ14, "verifyRepayInput should failed")
     assert.equal(msg14,"Amount exceeds dai debt")
 
-    userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("200")
-    userInfo.userWalletInfo.daiBalance = web3.utils.toWei("200")
-    const [succ141,msg141] = B.verifyRepayInput(userInfo,web3.utils.toWei("100"),web3)
+    userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("600")
+    userInfo.userWalletInfo.daiBalance = web3.utils.toWei("600")
+    const [succ141,msg141] = B.verifyRepayInput(userInfo,web3.utils.toWei("500"),web3)
     assert(! succ141, "verifyRepayInput should failed")
-    assert.equal(msg141,"You can repay all your outstanding debt or a maximum of 50 Dai")
+    const distFromDust = networkId === 42 ? "450" : "50"
+    assert.equal(msg141,"You can repay all your outstanding debt or a maximum of " + distFromDust.toString() + " Dai")
 
     userInfo.userWalletInfo.daiAllowance = web3.utils.toWei("600")
     userInfo.userWalletInfo.daiBalance = web3.utils.toWei("549.99999")
