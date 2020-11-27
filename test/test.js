@@ -102,7 +102,7 @@ contract('B Interface', function (accounts) {
     const cdp = userInfo.bCdpInfo.cdp
     console.log({cdp})
 
-    const withrawVal = web3.utils.toWei("600") // 300 dai
+    const withrawVal = web3.utils.toWei("600") // 600 dai
     console.log("proxy",userInfo.proxyInfo.userProxy)
 
     const txObject = B.generateDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withrawVal)
@@ -138,7 +138,7 @@ contract('B Interface', function (accounts) {
     await txObject1.send({gas:gasConsumption,value:0,from:user})
     await mineBlock()
 
-    const withrawVal = web3.utils.toWei("50") // 300 dai
+    const withrawVal = web3.utils.toWei("50") // 50 dai
     const txObject2 = B.repayDai(web3,networkId,userInfo.proxyInfo.userProxy,cdp,withrawVal)
     //console.log({txObject})
     gasConsumption = increaseABit(await txObject2.estimateGas({value:0,from:user}))
